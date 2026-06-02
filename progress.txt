@@ -1,0 +1,411 @@
+Homistay Project - Progress Log
+=================================
+Last updated: 2026-05-27
+
+PROJECT OVERVIEW
+----------------
+Full-stack homestay booking application (React frontend + Spring Boot backend).
+
+IMPLEMENTATION PLAN TASKS (SS1-SS5) - COMPLETED
+-----------------------------------------------
+SS1: Fix Dropdown Going Behind Elements ✓
+SS2: Airbnb-Style Search Bar ✓
+SS3: Map Feature Suggestions (research) ✓
+SS4: Amenities Filter in Search ✓
+SS5: Map on Property Detail Page ✓
+
+BUG FIXES & IMPROVEMENTS (2026-05-26)
+--------------------------------------
+
+[SearchBar.jsx]
+- Fixed dropdown z-index from z-50 to z-[100] for compact variant
+- Added max-height constraint to prevent dropdown going off-page
+- Dropdown only shows active properties (status === "active")
+
+[Search.jsx]
+- Added active-only filter: search results only show properties with status === "active"
+
+[AddProperty.jsx - Host Property Form]
+- Expanded COUNTRIES list from ~48 entries to ~195 (all UN-recognized countries)
+- Removed non-country values (e.g. "Bali, Indonesia", "Santorini, Greece")
+- Fixed cleaning fee input: strips ALL non-numeric chars (prevents negative values)
+- City field made optional (no longer required for step 2)
+- Added auto-geocoding with 800ms debounce when address/city/country changes
+- Added mapState validation: host must have valid pinned map location before leaving step 2
+- Location preview now auto-loads instead of requiring manual "Preview on map" click
+- Fixed Leaflet map initialization: changed from ID selector (#location-map-preview) to useRef
+- Fixed "Host access required" page: replaced dead-end with "Become a Host" upgrade CTA
+
+[PropertyDetails.jsx]
+- Fixed major bug: Leaflet map was created before the DOM element existed (chicken-and-egg issue)
+- Restructured map logic into two-phase approach:
+  Phase 1: Fetch coordinates from Nominatim geocoding API
+  Phase 2: Initialize Leaflet map on the DOM element (via useRef) after coordinates are ready
+- "Where you'll be" section now entirely hidden if property has no address data
+- Changed from ID selector (#map) to useRef for map container reference
+
+[api.js - Normalization]
+- normalizeProperty now strips "Custom:" prefix from all amenity names
+
+[Navbar.jsx]
+- "Become a host" button now redirects logged-in guests to /host/add-property
+- No longer opens auth dialog for already-logged-in users
+
+[Home.jsx]
+- "List your home" CTA button checks auth state:
+  Not logged in: opens auth dialog (signup as host)
+  Logged in: redirects to /host/add-property (shows upgrade page)
+
+[PropertyService.java (Backend)]
+- CHANGED delete from soft-delete (set isActive=false) to hard-delete (repository.delete)
+- Previously "deleted" properties reappeared after refresh because getHostProperties returned ALL properties
+- Now truly removes from database (cascades to images, bookings, reviews, availabilities)
+
+[Properties.jsx (Host Properties Page)]
+- After deleting a property, also updates AppContext's global properties list
+- Deleted property immediately disappears from all pages without requiring refresh
+
+[AddProperty.jsx - Map Removed (was causing blank white screen)]
+- REMOVED Leaflet map from location step entirely (kept breaking)
+- Replaced interactive map with simple location verification indicator
+- Shows green confirmation card with address and coordinates when geocoding succeeds
+- Auto-geocode still works (verifies address via Nominatim API)
+- mapState still used for lat/lng storage in property payload
+- Location must still be verified before proceeding past step 2
+
+[PropertyDetails.jsx - Map Crash Fix]
+- Wrapped Leaflet map initialization in try/catch to prevent blank white screen on error
+
+NEW FEATURES & ENHANCEMENTS (2026-05-27)
+--------------------------------------
+
+[schema.sql]
+- Added safe column migrations: properties (house_rules) and bookings (special_requests)
+- Created wishlists table with user index and constraints
+
+[RegisterRequest.java & ChangePasswordRequest.java & Navbar.jsx & Profile.jsx]
+- Enforced strict 12-character minimum password policy across registration and profile change password inputs
+- Implemented corresponding backend validation constraints and descriptive error messages
+
+[Wishlist System]
+- Created Wishlist.java backend entity, Repository, Service, and WishlistController (/api/wishlists)
+- Added wishlistApi services, global wishlist context states, and toggle handlers in AppContext.jsx
+- Enabled heart icon toggles on PropertyCard.jsx and PropertyDetails.jsx (requiring login)
+- Created Wishlist.jsx grid page showing favorited listings
+
+[House Rules & Special Requests]
+- Mapped host-side houseRules to Property entities and API responses
+- Mapped guest-side specialRequests to Booking entities and API responses
+- Pre-filled custom houseRules in AddProperty.jsx form and sent in payload
+- Sent guest specialRequests in Checkout.jsx booking payload
+
+[Host Calendar Availability]
+- Implemented getBlockedDates and toggleAvailability in PropertyService
+- Expose public blocked-dates endpoint and host-protected availability toggle endpoint
+- Disallowed host blocking overlapping dates that contain active confirmed/pending bookings
+- Enhanced Calendar.jsx to support interactive cell click (details popup for bookings, quick block/unblock for vacant dates)
+- Added date-range bulk block/unblock dialog form to host calendar
+- Hooked guest calendar to fetch blocked dates, disabling them on load and preventing ranges that span blocked dates
+
+[Property View Layout Polish]
+- Moved sticky CSS positioning to grid column wrapper in PropertyDetails.jsx, ensuring card anchors correctly on scroll
+- Added Airbnb-style "Things to know" details block (House Rules, Safety details, Cancellation Policy)
+
+[GlobalExceptionHandler.java (Backend Exception Handling)]
+- Added handlers for AsyncRequestNotUsableException and IOException client disconnections.
+- Prevents logging premature client aborts as system error stack traces and attempts to write responses to closed TCP connections.
+
+[Host Bookings Guest Information Exposing]
+- Updated BookingResponse.java and BookingService.java to include guestEmail and guestPhone in booking responses.
+- Updated api.js (normalizeBooking) to map guestEmail and guestPhone instead of discarding them.
+- Updated Calendar.jsx day details popup modal to display guest's contact email and phone.
+- Updated Bookings.jsx (Host Bookings page) to make table rows clickable, opening a beautiful detailed booking & guest profile modal showing guest contact info (email, phone), guest counts breakdown (adults, children, infants, pets), special requests, and stay details.
+
+[Host Earnings Early Payout Fix]
+- Updated Earnings.jsx to make "Request early payout" functional.
+- Added state tracking for payouts list and button processing states.
+- Implemented handleRequestPayout to transition pending payout status from "Pending" to "Paid" after a 1.5s simulated processing delay.
+- Integrated the useToast hook to display a success notification to the host when payout starts.
+
+[Host Bookings Modal Scrollable Fix]
+- Restructured DialogContent inside Bookings.jsx to add max-h-[90vh] and overflow-y-auto classes.
+- Prevents the guest information details modal from overflowing vertically and getting cut off at the top and bottom on smaller screens.
+
+[Add/Edit Property Form Fixes]
+- Fixed Bedrooms, Bathrooms, and Max Guests input fields in AddProperty.jsx by removing instant math/min-value coersion in the onChange handler, allowing them to be cleared.
+- Relocated and cleaned up the selected count indicator from below Guest Policies to the top of Step 4 (Amenities details) to prevent confusion.
+- Added top-level "Back to properties" button and changed step 1 bottom Back button to Cancel and navigate to /host/properties.
+
+[Wishlist Restrictions for Host Role]
+- Hiding the wishlist Heart/Save button on PropertyCard.jsx and PropertyDetails.jsx if the logged-in user is a host or admin.
+- Added programmatic validation safeguard in toggleWishlist inside AppContext.jsx to prevent host/admin wishlisting.
+
+NEW FEATURES & ENHANCEMENTS (2026-05-27)
+--------------------------------------
+
+[data.sql]
+- Seeded 3 completed bookings, payments, and realistic reviews for all 19 properties.
+
+[PropertyResponse.java & PropertyService.java & api.js]
+- Added hostBio and hostJoinedAt fields to PropertyResponse DTO.
+- Mapped hostBio and hostJoinedAt from Property host in PropertyService.
+- Normalized hostBio and hostJoinedAt in frontend api.js normalizeProperty.
+
+[Navbar.jsx]
+- Implemented Airbnb-style search header pill on all non-homepage guest pages.
+- Dynamically rendered current search parameters (destination, dates, guests) inside the header pill button.
+- Added Dialog overlay containing the full SearchBar (variant="hero") when clicking the search pill.
+- Auto-closed search dialog on wouter location changes.
+
+[Search.jsx & index.css]
+- Corrected PROPERTY_TYPES values to map to database types (villa, apartment, cabin, house, loft) rather than room types.
+- Fixed category filtering to map beachfront, mountains, city, and countryside categories to appropriate destinations and amenities.
+- Implemented side-by-side split screen view on desktop: filters left, listings middle, Leaflet map right.
+- Added mobile viewMode toggle ("Show map" / "Show list") to support seamless switching.
+- Rendered custom price bubble tags using L.divIcon.
+- Styled Leaflet popups as miniature property cards containing images, titles, prices, ratings, and navigation links.
+- Fixed grey tiles resizing glitch by calling invalidateSize on viewMode changes.
+- Overrode Leaflet popups and price tags CSS in index.css.
+
+[PropertyDetails.jsx]
+- Fixed page subtitle to capitalization and dynamic type matching (e.g. "Entire villa" / "Entire apartment" hosted by Host).
+- Added useEffect hook to fetch verified guest reviews dynamically from the backend on load.
+- Added highly polished "Meet your host" profile block containing host avatar, name, join date, biography, and statistics.
+
+BUG FIXES (2026-05-27 - Session 2)
+-----------------------------------
+
+[Search.jsx - Blank White Page Crash Fix]
+- CRITICAL: Search page crashed to blank white screen after map feature was added.
+- Root cause: filteredProperties (useMemo) was referenced inside a useEffect BEFORE it was declared.
+  useMemo values are not hoisted, so reading them before declaration throws a ReferenceError.
+- Fix: Moved filteredProperties useMemo block above the map useEffect that uses it.
+- Order is now: state declarations → filteredProperties useMemo → map useEffect → view mode useEffect.
+
+[PropertyDetails.jsx - Booking Card Price Visibility Fix]
+- Price breakdown (nights × guests × price, cleaning fee, total) was rendered BELOW the
+  "Proceed to Payment" button in Step 2 (Guest Details), forcing users to scroll down to see cost.
+- Fix: Moved price breakdown to appear ABOVE the guest detail form fields in Step 2,
+  so users immediately see the full cost summary before filling in their details.
+
+[data.sql - Map Showing Only 1 Marker Fix]
+- Map on /search page showed only 1 property marker out of 19.
+- Root cause: Properties insert used ON CONFLICT (id) DO NOTHING, so pre-existing rows
+  kept their original null latitude/longitude values from older DB state.
+- Fix: Changed to ON CONFLICT (id) DO UPDATE SET latitude, longitude, city, country, address
+  so coordinates are always refreshed on startup even for existing property rows.
+- After backend restart, all 19 properties will have valid coordinates and appear on the map.
+
+ALL 6 FEATURES IMPLEMENTED (2026-05-27 - Session 3)
+--------------------------------------------------
+
+FEATURE 5: Guest Requirements from Host
+[schema.sql]
+- Added guest_requirements TEXT column to properties table (safe ALTER TABLE migration)
+[Property.java]
+- Added guestRequirements field
+[PropertyRequest.java / PropertyResponse.java]
+- Added guestRequirements field to both DTOs
+[PropertyService.java]
+- Mapped guestRequirements in create, update (set when non-null), and mapToResponse
+[AddProperty.jsx]
+- Added "Guest requirements" section in step 4: checkboxes for common requirements (Government ID required, Minimum age 18/21, Security deposit, No smoking, No parties/events) + free text textarea
+- Added guestRequirements to initial state and payload
+[PropertyDetails.jsx]
+- Added "Guest requirements" section in "Things to know" area
+- Added acknowledgment checkbox in booking step 2: "I acknowledge and agree to the host's guest requirements" — must be checked to proceed
+- handleReserve validation checks acknowledgment
+[api.js normalizeProperty]
+- Added guestRequirements mapping
+[data.sql]
+- Added UPDATE statements setting guest_requirements for all 19 properties
+
+FEATURE 1: Host Check-in Instructions
+[schema.sql]
+- Added check_in_instructions TEXT column to properties table
+[Property.java / PropertyRequest.java / PropertyResponse.java]
+- Added checkInInstructions field to all
+[PropertyService.java]
+- Mapped in create, update, and mapToResponse
+[AddProperty.jsx]
+- Added textarea in step 5: "Check-in instructions (private — only shown to confirmed guests)"
+- Added checkInInstructions to initial state and payload
+[PropertyDetails.jsx]
+- Added useEffect to fetch user's confirmed/completed bookings for this property
+- If user has confirmed/completed booking and property has checkInInstructions, shows "Check-in details" section with the instructions
+- Labeled "This information is private and only visible to confirmed guests"
+[MyBookings.jsx]
+- Added "Check-in details" button on confirmed/completed bookings
+- Opens modal showing the property's checkInInstructions
+[api.js normalizeProperty]
+- Added checkInInstructions mapping
+[data.sql]
+- Added sample check-in instructions for 4 properties (WiFi, door code, parking, etc.)
+
+FEATURE 3: Special Request Status
+[schema.sql]
+- Added special_request_status VARCHAR(20) DEFAULT 'PENDING' with CHECK constraint (PENDING, ACCEPTED, DECLINED, NOTED)
+[Booking.java]
+- Added specialRequestStatus field with @Builder.Default = "PENDING"
+[BookingResponse.java]
+- Added specialRequestStatus field
+[BookingService.java]
+- Added updateSpecialRequestStatus() method: validates status, checks host owns property, sets status only if special_requests not blank
+- Mapped specialRequestStatus in mapToResponse
+[HostController.java]
+- Added PATCH /api/host/bookings/{id}/special-request-status endpoint
+[Host Bookings.jsx]
+- Modal shows dropdown (Pending → Accepted / Declined / Noted) for bookings with special requests
+- Status badge shown in table row
+[MyBookings.jsx]
+- Shows special request text + colored status badge (green=Accepted, red=Declined, yellow=Pending, blue=Noted)
+[api.js normalizeBooking]
+- Added specialRequestStatus mapping
+
+FEATURE 2: Host-to-Guest Notes
+[schema.sql]
+- Added host_notes TEXT column to bookings table
+[Booking.java]
+- Added hostNotes field
+[BookingResponse.java]
+- Added hostNotes field
+[BookingService.java]
+- Added updateHostNotes() method: validates host owns property, sets notes
+- Mapped hostNotes in mapToResponse
+[HostController.java]
+- Added PATCH /api/host/bookings/{id}/notes endpoint
+[Host Bookings.jsx]
+- Modal shows "Note to Guest" textarea with Save button
+- Textarea pre-filled with existing notes
+- Saves via API, updates local state
+[MyBookings.jsx]
+- Displays host note in a "Message from host" card with icon if present
+[Calendar.jsx]
+- Day detail popup shows host note if present
+[api.js normalizeBooking]
+- Added hostNotes mapping
+
+FEATURE 4: Extra Services / Add-ons
+[schema.sql]
+- Added property_addons table (id, property_id, name, description, price, is_active, created_at)
+- Added booking_addons junction table (id, booking_id, addon_id, quantity, price)
+- Added indexes
+[PropertyAddon.java entity]
+- New entity with ManyToOne to Property
+[BookingAddon.java entity]
+- New entity with ManyToOne to Booking and PropertyAddon
+[PropertyAddonRepository.java]
+- find by propertyId, find by propertyId and isActive
+[BookingAddonRepository.java]
+- find by bookingId
+[AddonRequest.java / AddonResponse.java / BookingAddonSelection.java / BookingAddonResponse.java]
+- DTOs for addon CRUD and booking selections
+[BookingRequest.java]
+- Added List<BookingAddonSelection> addons field
+[BookingResponse.java]
+- Added List<BookingAddonResponse> addons field
+[PropertyResponse.java]
+- Added List<AddonResponse> addons field
+[BookingService.java]
+- createBooking: saves selected addons, adds their price to totalPrice
+- mapToResponse: includes addons list with names/descriptions/prices
+[PropertyService.java]
+- Added getPropertyAddons(), createAddon(), deleteAddon() methods
+- mapToResponse includes addons list
+[HostController.java]
+- Added GET/POST /api/host/properties/{id}/addons and DELETE /api/host/properties/{id}/addons/{addonId}
+[AddProperty.jsx]
+- (Addon management can be added later; addons are shown in PropertyDetails)
+[PropertyDetails.jsx]
+- Step 1 booking card: shows available addons as checkboxes with prices
+- Step 2 price breakdown: shows addon costs
+- total calculation includes addonCost
+- handleReserve sends selected addons in currentBooking.addons
+[Checkout.jsx]
+- Passes addons to booking API
+- Shows selected addons in booking summary with prices
+[MyBookings.jsx]
+- Shows booked addons with names, quantities, and prices
+[Host Bookings.jsx]
+- Modal shows booked addons summary
+[api.js normalizeProperty]
+- Added addons array mapping
+[api.js normalizeBooking]
+- Added addons array mapping with name/description/quantity/price
+[data.sql]
+- Added 13 sample addons across properties (Airport Pickup, Breakfast, Late Checkout, Guided Trek, etc.)
+
+FEATURE 6: Booking Modification Requests
+[schema.sql]
+- Added booking_modifications table (id, booking_id, requested_by, new_check_in, new_check_out, new_guests, reason, status with CHECK, host_response, created_at, resolved_at)
+- Added index
+[BookingModification.java entity]
+- New entity with ManyToOne to Booking, ManyToOne to User
+[BookingModificationRepository.java]
+- Find by bookingId, findByBookingPropertyHostId
+[ModificationRequest.java / ModificationResponse.java]
+- DTOs for submitting and viewing modifications
+[BookingService.java]
+- Added requestModification(): validates guest owns booking, booking is CONFIRMED, creates PENDING modification
+- Added getModificationsForBooking(): returns modification history
+- Added respondToModification(): validates host ownership, approves/denies, if approved updates actual booking dates/guests and recalculates price
+- Added mapToModResponse() helper
+[HOST: HostController.java]
+- Added GET /api/host/bookings/{id}/modifications
+- Added PATCH /api/host/bookings/{bookingId}/modifications/{modId}
+[GUEST: ModificationController.java]
+- Added POST /api/bookings/{id}/modification (guest submits)
+- Added GET /api/bookings/{id}/modifications (view history)
+[Host Bookings.jsx]
+- Shows modification requests in modal with approve/deny buttons and optional response text
+- Displays modification history with status badges (Pending/Approved/Denied)
+- After approval, refreshes booking data to show updated dates/guests
+[MyBookings.jsx]
+- Added "Modify" button on confirmed bookings
+- Opens modal with new dates (check-in/check-out), new guest count, and reason text
+- Submits modification request via API
+[api.js]
+- Added bookingsApi.requestModification() and bookingsApi.getModifications()
+- Added hostApi.getModifications() and hostApi.respondToModification()
+
+SECURITY & VALIDATION
+---------------------
+- All new endpoints are JWT-protected (via Spring Security)
+- Host-only endpoints verify property/booking ownership before allowing changes
+- Guest modification requests verify the authenticated user owns the booking
+- SQL uses safe migrations (ADD COLUMN IF NOT EXISTS, CREATE TABLE IF NOT EXISTS)
+- Seed data uses ON CONFLICT DO NOTHING for idempotent inserts
+
+BUG FIXES & ENHANCEMENTS (2026-05-27 - Session 4)
+--------------------------------------------------
+
+[PropertyDetails.jsx - Check-in Details Visibility Fix]
+- Added setUserBookings([]) at the start of the check-in details useEffect to reset stale state
+- Prevents check-in details from being briefly visible on property B when navigating from property A
+- Previously, when navigating between properties, stale userBookings data from the previous property could show check-in details to non-booked users while the new API call was in flight
+
+[PropertyDetails.jsx - Pricing Display Fix]
+- Changed "/guest/night" label to "/night" in the booking card price display
+- Fixed price breakdown label from "price × guests × nights" to "price × nights"
+- The actual calculation (subtotal = nights × pricePerNight) was already correct — only the display labels were misleading
+
+LAYOUT & UI CHANGES (2026-05-27 - Session 5)
+--------------------------------------------
+
+[PropertyDetails.jsx - Share & Save Button Reposition]
+- Moved Share and Save (wishlist) buttons from the page header into the booking card sidebar
+- Buttons now appear at the top of the sticky booking panel, above the price display
+- Reduced button size to h-8 with smaller text/icons for a cleaner fit
+
+[PropertyDetails.jsx - Add-ons Moved to Booking Step 2]
+- Removed add-ons selection from the "Meet your host" section in the left column
+- Added add-ons selection in the booking card sidebar between the price breakdown and guest form fields (step 2)
+- Add-ons are now shown only after the user selects dates and clicks "Continue"
+
+[Calendar.jsx - Host Calendar Size Reduction]
+- Reduced calendar cell size from aspect-square to fixed h-8
+- Decreased container padding (p-6 → p-4)
+- Reduced grid gap (gap-1 → gap-0.5)
+- Smaller navigation buttons (h-7 w-7, w-3 h-3 icons)
+- Condensed spacing throughout: margins, padding, legend, and property info section
+- Smaller font sizes for month label and legend text
