@@ -173,3 +173,340 @@ Imagine you select 3 nights in Mumbai and check off two places to visit. The sys
    - When the user closes the popup, the state (selected places, nights count, search filters) automatically clears after 250ms so that the next click starts fresh.
 4. **Missing Coordinates**:
    - If any property has missing coordinate data in the database, it is automatically ignored in calculations to prevent calculation crashes.
+
+===============================================================================================================================================
+
+# ✈️ **Trip Planner — Complete Final Script**
+
+---
+
+## 🎤 **1. Introduction**
+
+Now I’ll explain one of the most important and unique features of this project — the **Trip Planner**.
+
+Unlike traditional booking platforms that only show listings, this feature helps users **plan their entire trip intelligently** by recommending the best property based on:
+
+* Cost
+* Distance
+* Overall convenience
+
+---
+
+## 🧭 **2. User Flow (Step-by-Step)**
+
+The Trip Planner works in a simple 3-step process:
+
+---
+
+### 🖱️ Step 1: Choose City
+
+Users select a city:
+
+* Bengaluru
+* Goa
+* Mumbai
+
+Each city has predefined **tourist attractions with coordinates**.
+
+---
+
+### 🖱️ Step 2: Select Places
+
+Users select places they want to visit:
+
+* Beaches
+* Temples
+* Landmarks
+
+👉 At least one place must be selected.
+
+The system also shows **available properties count** in that city.
+
+---
+
+### 🖱️ Step 3: Generate Plans
+
+The system processes all properties and generates **3 plans**:
+
+* 💰 Budget Plan
+* 📍 Nearest Plan
+* ⭐ Best Overall Plan
+
+Each plan shows:
+
+* Property details
+* Price breakdown
+* Distance to each place
+* Total cost
+
+Users can also change the number of nights and see **real-time updates**.
+
+---
+
+## ⚙️ **3. Plan Logic**
+
+---
+
+### 💰 Budget Plan
+
+Selects the **cheapest property**:
+
+```
+Total Cost = (Price per Night × Nights) + Cleaning Fee
+```
+
+---
+
+### 📍 Nearest Plan
+
+* Calculates distance from property → all selected places
+* Computes **average distance**
+* Chooses minimum
+
+---
+
+### ⭐ Best Overall Plan
+
+Balances cost and distance:
+
+* 40% → Price
+* 60% → Distance
+
+---
+
+## 📍 **4. Distance Calculation — Haversine Formula**
+
+### 🧠 What is it?
+
+The **Haversine formula** is used to calculate the **shortest distance between two points on Earth’s surface**.
+
+Since Earth is spherical, we cannot use simple formulas like:
+
+```
+distance = √(x² + y²)
+```
+
+Instead, we calculate the **great-circle distance**.
+
+---
+
+### 🌍 Conceptual Understanding
+
+Imagine:
+
+* A globe
+* A string stretched between two points
+
+👉 The string follows a curved path
+
+Haversine calculates the length of that curved path.
+
+---
+
+### 🧮 Formula
+
+```
+a = sin²(Δlat / 2) + cos(lat1) × cos(lat2) × sin²(Δlon / 2)
+
+c = 2 × atan2(√a, √(1−a))
+
+distance = R × c
+```
+
+Where:
+
+* R = 6371 km (Earth’s radius)
+
+---
+
+### ⚙️ Steps
+
+1. Convert degrees → radians
+2. Calculate Δlat and Δlon
+3. Apply sin and cos
+4. Multiply by Earth radius
+
+👉 Output = distance in kilometers
+
+---
+
+### 💡 Why Important?
+
+* Accurate real-world distance
+* Better recommendations
+* Improves user experience
+
+---
+
+## 🎯 **5. Example (Mumbai Case)**
+
+User selects:
+
+* City: Mumbai
+* Places:
+
+  * Gateway of India
+  * Marine Drive
+* Nights: 3
+
+---
+
+### 🏠 Property A — Chic Apartment
+
+* Cost: $285
+* Distance: 14.3 km
+
+Scores:
+
+* Price = 0.0
+* Distance = 1.0
+
+```
+Final Score = (0.4 × 0.0) + (0.6 × 1.0) = 0.60
+```
+
+---
+
+### 🏠 Property B — Modern High-Rise
+
+* Cost: $450
+* Distance: 7.1 km
+
+Scores:
+
+* Price = 1.0
+* Distance = 0.0
+
+```
+Final Score = (0.4 × 1.0) + (0.6 × 0.0) = 0.40
+```
+
+---
+
+### ✅ Result
+
+* Budget → Property A
+* Nearest → Property B
+* Best Overall → **Property B**
+
+👉 Even though it's expensive, it reduces travel time.
+
+---
+
+## 💡 **6. Why This Feature Matters**
+
+* Reduces decision-making effort
+* Balances cost and convenience
+* Provides intelligent recommendations
+* Enhances user experience
+
+---
+
+## 🧪 **7. Edge Case Handling**
+
+* No properties → planner disabled
+* One property → same recommendation
+* Missing coordinates → ignored
+* No places selected → blocked
+
+---
+
+# ⚙️ **8. Deep Technical Explanation (Internal Working)**
+
+---
+
+## 🧩 Data Sources
+
+### Static:
+
+* Tourist places with lat/long
+
+### Dynamic:
+
+* Properties from application state
+
+---
+
+## 🔄 Processing Flow
+
+### Step 1: Filter Properties
+
+* By selected city
+* Ignore invalid data
+
+---
+
+### Step 2: Distance Calculation
+
+```
+for each property:
+    for each selected place:
+        calculate haversine distance
+    calculate average distance
+```
+
+---
+
+### Step 3: Cost Calculation
+
+```
+total_cost = (price × nights) + cleaning_fee
+```
+
+---
+
+### Step 4: Normalization
+
+```
+normalized = (value - min) / (max - min)
+```
+
+---
+
+### Step 5: Scoring
+
+```
+final_score = (0.4 × price) + (0.6 × distance)
+```
+
+---
+
+### Step 6: Select Plans
+
+* Budget → min(cost)
+* Nearest → min(distance)
+* Best → min(score)
+
+---
+
+## ⚡ Performance
+
+* Runs fully on frontend
+* No API calls needed
+* Instant response
+
+---
+
+## 🧠 Design Decisions
+
+* Distance weighted more → better UX
+* Normalization → fair comparison
+* Haversine → accuracy
+* Frontend logic → speed
+
+---
+
+## 🚀 Future Improvements
+
+* Real-time traffic integration
+* Map APIs
+* AI recommendations
+* Personalization
+
+---
+
+# ✅ Final Impact
+
+This feature transforms the platform from:
+➡️ Just booking
+➡️ To intelligent trip planning
