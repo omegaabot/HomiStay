@@ -1,6 +1,6 @@
 Homistay Project - Progress Log
 =================================
-Last updated: 2026-05-27
+Last updated: 2026-06-02
 
 PROJECT OVERVIEW
 ----------------
@@ -409,3 +409,84 @@ LAYOUT & UI CHANGES (2026-05-27 - Session 5)
 - Smaller navigation buttons (h-7 w-7, w-3 h-3 icons)
 - Condensed spacing throughout: margins, padding, legend, and property info section
 - Smaller font sizes for month label and legend text
+
+RECENT CHANGES (2026-06-02)
+---------------------------
+
+[Backend]
+- Fixed POM packaging (pom -> jar) & removed unused demo module so `mvn spring-boot:run` works
+- Backend running on port 8090
+
+[Profile Page - All Users]
+- Added Full Name editable input field in edit mode (was missing)
+- DOB validation enforces age >= 16 years
+- Gender options restricted to Male / Female / Other only (removed "Prefer not to say")
+- Phone field shows inline error when alphabets are typed
+- Password validation: min 8 characters, must contain letter + number + symbol (applied to both Profile change password and Navbar registration)
+
+[Security Audit]
+- Generated SECURITY_AUDIT.md with full findings (17 issues: 4 critical, 9 medium, 4 low)
+- Spring Boot upgrade from 3.2.5 to 3.4.x assessed as low-risk (~2-3 hours)
+
+RECENT CHANGES (2026-06-03)
+---------------------------
+
+[Host Dashboard - Dashboard.jsx]
+- Removed "pending" from Confirmed Bookings stat card description
+
+[Host Bookings - Bookings.jsx]
+- Removed pending status filter button
+- Added property dropdown filter with max-h-60 scroll
+
+[Host Calendar - Calendar.jsx]
+- Removed pending status entirely (status styles, legend, getDayStatus)
+- Pending bookings now treated as confirmed
+- Restructured to left sidebar property list + right side calendar
+- Added upcoming bookings list with click-to-navigate
+
+[Host Earnings - Earnings.jsx]
+- Switched Total Earnings, This Month, Confirmed Bookings, Avg per Booking from mock to hostApi.dashboard() data
+- Removed early-payout section entirely
+- Replaced mock 12-month chart data with dynamic data from backend monthly-earnings API
+- Filtered out future months from the chart and breakdown table (shows Jan-Jun 2026 only)
+
+[Backend - Monthly Earnings Endpoint]
+- Created MonthlyEarningsResponse DTO
+- Added monthlyEarningsSince native query to PaymentRepository (groups by month for last 12 months)
+- Added getMonthlyEarnings() in HostDashboardService
+- Added GET /api/host/earnings/monthly in HostController
+- Added hostApi.monthlyEarnings() in frontend api.js
+
+[Earnings.jsx Cleanup]
+- Removed unused `properties` destructure from useAppContext
+- Removed dead mockEarningsData constant
+
+[Address Verification]
+- Reverted all 7 address verification improvements back to original implementation
+- Deleted AddressVerificationRequest/Response DTOs
+- Removed verify-address endpoint from PropertyController and PropertyService
+- Removed Leaflet map, multi-result dropdown, cache, throttle from AddProperty.jsx
+- Restored client-side fetch directly to Nominatim
+
+[Trip Planner Feature & Core Implementation]
+- Created TripPlanner.jsx component implementing a 3-step popup wizard:
+  - Step 1: Choose a city (Bengaluru, Goa, Mumbai) with real-time text filtering.
+  - Step 2: Select tourist spots (5 places per city) via checkboxes.
+  - Step 3: View Budget, Nearest, and Best Overall travel plans.
+- Integrated Trip Planner into Navbar.jsx (auth-gated: opens Login dialog if signed out; opens Trip Planner dialog if signed in).
+- Added mobile/desktop dropdown item trigger in Navbar.jsx.
+
+[Trip Planner Database Seeds & Test Data]
+- Added 4 new active properties to data.sql to make the demo more diverse:
+  - Goa: Modern Condo near Baga Beach (#20) at $130/night, Secluded Jungle Cabin (#21) at $110/night.
+  - Mumbai: Chic Apartment in Bandra (#22) at $95/night, Luxury Villa near Juhu Beach (#23) at $290/night.
+- Seeded high-quality image paths, guest requirements, and check-in instructions for the new properties in data.sql.
+
+[Travel Plan Optimization & Math Correction]
+- Implemented Haversine formula distance utility in TripPlanner.jsx.
+- Programmed Budget Plan (cheapest total cost) and Nearest Plan (minimum average distance to selected spots).
+- Designed and corrected Best Overall Plan using min-max normalization (aligns price and distance to 0-to-1 scale) and weighted scoring (40% price + 60% distance).
+
+[Project Documentation]
+- Rewrote trip_planner.md to provide a clean, human-friendly explanation of the calculations, attraction coordinates, property references, and edge cases.
+- Created root README.md providing a detailed outline of features, stack details, database installation, and instructions to run both services locally.
